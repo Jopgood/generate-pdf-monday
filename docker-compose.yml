@@ -1,0 +1,10 @@
+services:
+  docx-pdf-app:
+    build: .
+    volumes:
+      - ./templates:/templates
+      - ./output:/output
+    ports:
+      - "8080:8080"
+    environment:
+      - PYTHONPATH=/usr/lib/python3/dist-packages

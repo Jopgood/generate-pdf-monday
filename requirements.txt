@@ -1,0 +1,6 @@
+requests
+fastapi
+pydantic
+python-docx
+python-jose
+uvicorn

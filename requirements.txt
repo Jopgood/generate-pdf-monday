@@ -4,3 +4,5 @@ pydantic
 python-docx
 python-jose
 uvicorn
+pyjwt
+python-dotenv

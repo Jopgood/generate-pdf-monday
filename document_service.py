@@ -4,6 +4,10 @@ from pydantic import BaseModel
 from subprocess import run, PIPE
 import tempfile
 import re
+from logging_config import LoggerAdapter, setup_logging
+import logging
+
+logger = LoggerAdapter(setup_logging(), "document_service")
 
 
 class DocxEditOptions(BaseModel):
@@ -35,6 +39,14 @@ def convert_to_pdf(input_path: str, output_path: str):
 
 
 def edit_docx_convert_to_pdf_and_save(options: DocxEditOptions) -> str:
+    logger.log_operation(
+        logging.INFO,
+        "edit_document",
+        "Starting document editing process",
+        {"input_file": options.input_file_name,
+            "output_file": options.output_file_name}
+    )
+
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     templates_dir = os.path.join(project_root, 'templates')
     output_dir = os.path.join(project_root, 'output')
@@ -44,6 +56,14 @@ def edit_docx_convert_to_pdf_and_save(options: DocxEditOptions) -> str:
         output_dir, f"{sanitize_filename(options.output_file_name)}.pdf")
 
     try:
+        os.makedirs(output_dir, exist_ok=True)
+        doc = Document(input_docx_path)
+
+        logger.log_operation(
+            logging.INFO,
+            "edit_document",
+            "Processing document placeholders"
+        )
         os.makedirs(output_dir, exist_ok=True)
 
         doc = Document(input_docx_path)
@@ -66,17 +86,39 @@ def edit_docx_convert_to_pdf_and_save(options: DocxEditOptions) -> str:
             temp_docx_path = tmp.name
             doc.save(temp_docx_path)
 
-        print('DOCX file updated successfully.')
+        logger.log_operation(
+            logging.INFO,
+            "convert_pdf",
+            "Converting document to PDF",
+            {"temp_path": temp_docx_path}
+        )
 
         convert_to_pdf(temp_docx_path, output_pdf_path)
 
-        print('Document edited, converted to PDF, and saved successfully.')
+        logger.log_operation(
+            logging.INFO,
+            "edit_document",
+            "Document processing completed successfully",
+            {"output_path": output_pdf_path}
+        )
 
         return output_pdf_path
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        logger.log_operation(
+            logging.ERROR,
+            "edit_document",
+            "Document processing failed",
+            {"error": str(e)},
+            exc_info=True
+        )
         raise
+
     finally:
         if 'temp_docx_path' in locals() and os.path.exists(temp_docx_path):
             os.remove(temp_docx_path)
-            print(f"Temporary file {temp_docx_path} has been deleted.")
+            logger.log_operation(
+                logging.INFO,
+                "cleanup",
+                "Temporary file deleted",
+                {"temp_path": temp_docx_path}
+            )
